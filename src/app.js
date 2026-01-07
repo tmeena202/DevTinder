@@ -1,25 +1,32 @@
 const express = require("express");
-
+const connectDB = require("./config/database");
 const app = express();
+const User = require("./models/user");
 
-// this will match only GET API calls to /user
-app.get("/user", (req, res) => {
-  res.send({ firstName: "John", lastName: "Doe" });
+app.post("/signup", async (req, res) => {
+  // Creating a new instance of the User model
+  const user = new User({
+    firstName: "Sachin",
+    lastName: "Tendulkar",
+    emailId: "sachin@gmail.com",
+    password: "sachin@202",
+  });
+
+  try {
+    await user.save();
+    res.send("User added successfully");
+  } catch (err) {
+    res.status(400).send("Error in saving user:" + err.message);
+  }
 });
 
-app.post("/user", (req, res) => {
-  res.send("Data successfully saved!");
-});
-
-app.delete("/user", (req, res) => {
-  res.send("Data successfully deleted!");
-});
-
-// this will match all the HTTP methods API calls to /test
-app.use("/test", (req, res) => {
-  res.send("Hello, World!");
-});
-
-app.listen(3000, () => {
-  console.log("Server is running on 3000");
-});
+connectDB()
+  .then(() => {
+    console.log("Database connection established ....");
+    app.listen(3000, () => {
+      console.log("Server is running on 3000");
+    });
+  })
+  .catch((err) => {
+    console.log("Database connection failed ....");
+  });
