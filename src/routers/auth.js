@@ -1,23 +1,22 @@
 const express = require("express");
-const { validateSignUpData } = require("../utils/validation");
-const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
-const User = require("../models/user");
-
 const authRouter = express.Router();
+
+const { validateSignUpData } = require("../utils/validation");
+const User = require("../models/user");
+const bcrypt = require("bcrypt");
 
 authRouter.post("/signup", async (req, res) => {
   try {
-    // validation of data
+    // Validation of data
     validateSignUpData(req);
 
     const { firstName, lastName, emailId, password } = req.body;
 
-    // Encryt the password
+    // Encrypt the password
     const passwordHash = await bcrypt.hash(password, 10);
-    // console.log(passwordHash);
+    console.log(passwordHash);
 
-    // Creating a new instance of the User model
+    //   Creating a new instance of the User model
     const user = new User({
       firstName,
       lastName,
@@ -25,10 +24,16 @@ authRouter.post("/signup", async (req, res) => {
       password: passwordHash,
     });
 
-    await user.save();
-    res.send("User added successfully");
+    const savedUser = await user.save();
+    const token = await savedUser.getJWT();
+
+    res.cookie("token", token, {
+      expires: new Date(Date.now() + 8 * 3600000),
+    });
+
+    res.json({ message: "User Added successfully!", data: savedUser });
   } catch (err) {
-    res.status(400).send("Error in saving user:" + err.message);
+    res.status(400).send("ERROR : " + err.message);
   }
 });
 
@@ -38,34 +43,30 @@ authRouter.post("/login", async (req, res) => {
 
     const user = await User.findOne({ emailId: emailId });
     if (!user) {
-      throw new Error("EmailId is not present in DB");
+      throw new Error("Invalid credentials");
     }
-
     const isPasswordValid = await user.validatePassword(password);
 
     if (isPasswordValid) {
-      // create a JWT token
-
       const token = await user.getJWT();
-      console.log(token);
 
-      //Add the token to cookie and then the response back to user
-      res.cookie("token", token);
-
-      res.send("Login successfully");
+      res.cookie("token", token, {
+        expires: new Date(Date.now() + 8 * 3600000),
+      });
+      res.send(user);
     } else {
-      throw new error("Password is not correct");
+      throw new Error("Invalid credentials");
     }
   } catch (err) {
-    res.status(400).send("Something went wrong:" + err.message);
+    res.status(400).send("ERROR : " + err.message);
   }
 });
 
-authRouter.post("/logout", async (rq, res) => {
+authRouter.post("/logout", async (req, res) => {
   res.cookie("token", null, {
     expires: new Date(Date.now()),
   });
-  res.send("Logout Successful");
+  res.send("Logout Successful!!");
 });
 
 module.exports = authRouter;
