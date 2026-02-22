@@ -5,18 +5,16 @@ const { validateSignUpData } = require("../utils/validation");
 const User = require("../models/user");
 const bcrypt = require("bcrypt");
 
+/* ================= SIGNUP ================= */
+
 authRouter.post("/signup", async (req, res) => {
   try {
-    // Validation of data
     validateSignUpData(req);
 
     const { firstName, lastName, emailId, password } = req.body;
 
-    // Encrypt the password
     const passwordHash = await bcrypt.hash(password, 10);
-    console.log(passwordHash);
 
-    //   Creating a new instance of the User model
     const user = new User({
       firstName,
       lastName,
@@ -28,6 +26,9 @@ authRouter.post("/signup", async (req, res) => {
     const token = await savedUser.getJWT();
 
     res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       expires: new Date(Date.now() + 8 * 3600000),
     });
 
@@ -37,35 +38,47 @@ authRouter.post("/signup", async (req, res) => {
   }
 });
 
+/* ================= LOGIN ================= */
+
 authRouter.post("/login", async (req, res) => {
   try {
     const { emailId, password } = req.body;
 
-    const user = await User.findOne({ emailId: emailId });
+    const user = await User.findOne({ emailId });
     if (!user) {
       throw new Error("Invalid credentials");
     }
+
     const isPasswordValid = await user.validatePassword(password);
-
-    if (isPasswordValid) {
-      const token = await user.getJWT();
-
-      res.cookie("token", token, {
-        expires: new Date(Date.now() + 8 * 3600000),
-      });
-      res.send(user);
-    } else {
+    if (!isPasswordValid) {
       throw new Error("Invalid credentials");
     }
+
+    const token = await user.getJWT();
+
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      expires: new Date(Date.now() + 8 * 3600000),
+    });
+
+    res.send(user);
   } catch (err) {
     res.status(400).send("ERROR : " + err.message);
   }
 });
 
+/* ================= LOGOUT ================= */
+
 authRouter.post("/logout", async (req, res) => {
   res.cookie("token", null, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
     expires: new Date(Date.now()),
   });
+
   res.send("Logout Successful!!");
 });
 
