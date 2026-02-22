@@ -6,10 +6,6 @@ require("dotenv").config();
 
 const app = express();
 
-/* ===========================
-   CORS CONFIGURATION
-=========================== */
-
 const allowedOrigins = [
   "http://localhost:5173",
   "https://devconnect-web.vercel.app",
@@ -26,27 +22,15 @@ app.use(
       }
     },
     credentials: true,
-  })
+  }),
 );
-
-/* ===========================
-   MIDDLEWARES
-=========================== */
 
 app.use(express.json());
 app.use(cookieParser());
 
-/* ===========================
-   HEALTH CHECK ROUTE
-=========================== */
-
 app.get("/", (req, res) => {
   res.status(200).send("Backend is running successfully 🚀");
 });
-
-/* ===========================
-   ROUTES
-=========================== */
 
 const authRouter = require("./routers/auth");
 const profileRouter = require("./routers/profile");
@@ -58,31 +42,19 @@ app.use("/", profileRouter);
 app.use("/", requestRouter);
 app.use("/", userRouter);
 
-/* ===========================
-   DATABASE CONNECTION
-=========================== */
-
 connectDB()
   .then(() => {
     console.log("Database connection established ....");
+
+    if (process.env.NODE_ENV !== "production") {
+      const PORT = process.env.PORT || 3000;
+      app.listen(PORT, () => {
+        console.log(`Server is running on ${PORT}`);
+      });
+    }
   })
   .catch((err) => {
     console.error("Database connection failed ....", err.message);
   });
-
-/* ===========================
-   LOCAL SERVER ONLY
-=========================== */
-
-if (process.env.NODE_ENV !== "production") {
-  const PORT = process.env.PORT || 3000;
-  app.listen(PORT, () => {
-    console.log(`Server is running on ${PORT}`);
-  });
-}
-
-/* ===========================
-   EXPORT FOR VERCEL
-=========================== */
 
 module.exports = app;
