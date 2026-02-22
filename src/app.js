@@ -6,10 +6,13 @@ require("dotenv").config();
 
 const app = express();
 
-// ✅ CORS (adjust frontend URL when deployed)
+/* ===========================
+   CORS CONFIGURATION
+=========================== */
+
 const allowedOrigins = [
   "http://localhost:5173",
-  "https://devconnect-web.vercel.app", // replace with real frontend URL
+  "https://devconnect-web.vercel.app",
 ];
 
 app.use(
@@ -18,21 +21,33 @@ app.use(
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
+        console.log("Blocked by CORS:", origin);
         callback(new Error("Not allowed by CORS"));
       }
     },
     credentials: true,
-  }),
+  })
 );
+
+/* ===========================
+   MIDDLEWARES
+=========================== */
 
 app.use(express.json());
 app.use(cookieParser());
 
+/* ===========================
+   HEALTH CHECK ROUTE
+=========================== */
+
 app.get("/", (req, res) => {
-  res.send("Backend is running successfully 🚀");
+  res.status(200).send("Backend is running successfully 🚀");
 });
 
-// Routes
+/* ===========================
+   ROUTES
+=========================== */
+
 const authRouter = require("./routers/auth");
 const profileRouter = require("./routers/profile");
 const requestRouter = require("./routers/request");
@@ -43,22 +58,31 @@ app.use("/", profileRouter);
 app.use("/", requestRouter);
 app.use("/", userRouter);
 
-// ✅ KEEPING YOUR DATABASE LOGIC SAME
+/* ===========================
+   DATABASE CONNECTION
+=========================== */
+
 connectDB()
   .then(() => {
     console.log("Database connection established ....");
-
-    // ✅ Only start server if NOT running on Vercel
-    if (process.env.NODE_ENV !== "production") {
-      const PORT = process.env.PORT || 3000;
-      app.listen(PORT, () => {
-        console.log(`Server is running on ${PORT}`);
-      });
-    }
   })
   .catch((err) => {
-    console.log("Database connection failed ....");
+    console.error("Database connection failed ....", err.message);
   });
 
-// ✅ Always export (needed for Vercel)
+/* ===========================
+   LOCAL SERVER ONLY
+=========================== */
+
+if (process.env.NODE_ENV !== "production") {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`Server is running on ${PORT}`);
+  });
+}
+
+/* ===========================
+   EXPORT FOR VERCEL
+=========================== */
+
 module.exports = app;
